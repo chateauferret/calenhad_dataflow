@@ -1,14 +1,12 @@
 #include "NodeStyle.hpp"
 
-#include <iostream>
+#include "StyleCollection.hpp"
 
 #include <QtCore/QJsonArray>
 #include <QtCore/QJsonObject>
 #include <QtCore/QJsonValueRef>
 
 #include <QtCore/QDebug>
-
-#include "StyleCollection.hpp"
 
 using QtNodes::NodeStyle;
 
@@ -22,6 +20,14 @@ NodeStyle::NodeStyle()
     // Explicit resources inialization for preventing the static initialization
     // order fiasco: https://isocpp.org/wiki/faq/ctors#static-init-order
     initResources();
+
+    // Initialize status icons after resources are loaded
+    statusUpdated = QIcon(":/status_icons/updated.svg");
+    statusProcessing = QIcon(":/status_icons/processing.svg");
+    statusPending = QIcon(":/status_icons/pending.svg");
+    statusInvalid = QIcon(":/status_icons/failed.svg");
+    statusEmpty = QIcon(":/status_icons/empty.svg");
+    statusPartial = QIcon(":/status_icons/partial.svg");
 
     // This configuration is stored inside the compiled unit and is loaded statically
     loadJsonFile(":DefaultStyle.json");
@@ -88,6 +94,18 @@ void NodeStyle::setNodeStyle(QString jsonText)
         values[#variable] = variable; \
     }
 
+#define NODE_STYLE_READ_BOOL(values, variable) \
+    { \
+        auto valueRef = values[#variable]; \
+        NODE_STYLE_CHECK_UNDEFINED_VALUE(valueRef, variable) \
+        variable = valueRef.toBool(); \
+    }
+
+#define NODE_STYLE_WRITE_BOOL(values, variable) \
+    { \
+        values[#variable] = variable; \
+    }
+
 void NodeStyle::loadJson(QJsonObject const &json)
 {
     QJsonValue nodeStyleValues = json["NodeStyle"];
@@ -101,6 +119,7 @@ void NodeStyle::loadJson(QJsonObject const &json)
     NODE_STYLE_READ_COLOR(obj, GradientColor2);
     NODE_STYLE_READ_COLOR(obj, GradientColor3);
     NODE_STYLE_READ_COLOR(obj, ShadowColor);
+    NODE_STYLE_READ_BOOL(obj, ShadowEnabled);
     NODE_STYLE_READ_COLOR(obj, FontColor);
     NODE_STYLE_READ_COLOR(obj, FontColorFaded);
     NODE_STYLE_READ_COLOR(obj, ConnectionPointColor);
@@ -126,6 +145,7 @@ QJsonObject NodeStyle::toJson() const
     NODE_STYLE_WRITE_COLOR(obj, GradientColor2);
     NODE_STYLE_WRITE_COLOR(obj, GradientColor3);
     NODE_STYLE_WRITE_COLOR(obj, ShadowColor);
+    NODE_STYLE_WRITE_BOOL(obj, ShadowEnabled);
     NODE_STYLE_WRITE_COLOR(obj, FontColor);
     NODE_STYLE_WRITE_COLOR(obj, FontColorFaded);
     NODE_STYLE_WRITE_COLOR(obj, ConnectionPointColor);
@@ -143,4 +163,17 @@ QJsonObject NodeStyle::toJson() const
     root["NodeStyle"] = obj;
 
     return root;
+}
+
+void NodeStyle::setBackgroundColor(QColor const &color)
+{
+    GradientColor0 = color;
+    GradientColor1 = color;
+    GradientColor2 = color;
+    GradientColor3 = color;
+}
+
+QColor NodeStyle::backgroundColor() const
+{
+    return GradientColor0;
 }
